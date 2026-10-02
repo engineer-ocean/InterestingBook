@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vLLM 博士论文中文讲义 · Efficient Inference Engine for LLMs</title>
+<style>
+:root{
+  --primary:#1e40af; --primary-light:#3b82f6; --accent:#f59e0b; --accent-soft:#fef3c7;
+  --bg:#f6f8fb; --card:#ffffff; --border:#e3e8ef; --text:#1e293b; --muted:#64748b;
+  --green:#059669; --green-soft:#ecfdf5; --red:#dc2626; --red-soft:#fef2f2; --purple:#7c3aed;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Noto Sans CJK SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  line-height:1.8; font-size:15.5px;
+}
+.layout{display:flex; max-width:1480px; margin:0 auto; align-items:flex-start}
+
+/* ---------- 侧边目录 ---------- */
+.sidebar{
+  width:290px; flex:none; position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:#fff; border-right:1px solid var(--border); padding:22px 16px 40px;
+}
+.sidebar h4{margin:0 0 6px; font-size:15px; color:var(--primary)}
+.sidebar .sub{font-size:12px; color:var(--muted); margin-bottom:16px; line-height:1.5}
+.sidebar a{
+  display:block; padding:6px 10px; margin:1px 0; border-radius:6px; color:#475569;
+  text-decoration:none; font-size:13.2px; border-left:3px solid transparent; transition:.15s;
+}
+.sidebar a:hover{background:#f1f5f9; color:var(--primary)}
+.sidebar a.active{background:#eff6ff; color:var(--primary); border-left-color:var(--primary); font-weight:600}
+.sidebar a.lv2{padding-left:22px; font-size:12.6px}
+
+/* ---------- 主体 ---------- */
+.main{flex:1; min-width:0; padding:0 40px 80px; max-width:1000px}
+.hero{
+  background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%);
+  color:#fff; border-radius:0 0 18px 18px; margin:0 -40px 28px; padding:38px 44px 34px;
+}
+.hero .kicker{font-size:12.5px; letter-spacing:2px; opacity:.85; text-transform:uppercase}
+.hero h1{margin:8px 0 6px; font-size:30px; line-height:1.35; border:none; padding:0}
+.hero .en{font-size:14px; opacity:.9; font-style:italic; margin-bottom:18px}
+.hero .meta{display:flex; flex-wrap:wrap; gap:10px 26px; font-size:13px; opacity:.95}
+.hero .meta div span{opacity:.7}
+
+h1,h2,h3,h4{color:var(--primary); line-height:1.4}
+h2{
+  font-size:23px; margin:46px 0 14px; padding-bottom:10px; border-bottom:2px solid var(--primary);
+}
+h2 .num{
+  display:inline-block; background:var(--primary); color:#fff; font-size:14px;
+  border-radius:8px; padding:2px 11px; margin-right:10px; vertical-align:3px;
+}
+h3{font-size:18px; margin:30px 0 10px; padding-left:12px; border-left:4px solid var(--primary-light)}
+h4{font-size:15.5px; margin:20px 0 8px; color:#334155}
+p{margin:10px 0}
+ul,ol{margin:10px 0; padding-left:24px}
+li{margin:5px 0}
+strong{color:#0f172a}
+code{
+  background:#f1f5f9; padding:1.5px 6px; border-radius:5px; font-size:13.5px;
+  font-family:"SF Mono",Consolas,Monaco,monospace; color:#b91c1c;
+}
+
+/* ---------- 组件 ---------- */
+.card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px 26px; margin:18px 0}
+.goal{background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:14px 18px; margin:16px 0; font-size:14.5px}
+.goal b{color:var(--primary)}
+
+.insight{
+  background:var(--accent-soft); border-left:5px solid var(--accent); border-radius:0 12px 12px 0;
+  padding:14px 20px; margin:18px 0;
+}
+.insight .lbl{font-weight:700; color:#b45309; font-size:13px; letter-spacing:1px}
+.insight p{margin:6px 0 0}
+
+.callout{border-left:5px solid var(--primary-light); background:#f8fafc; padding:12px 18px; margin:14px 0; border-radius:0 10px 10px 0; font-size:14.5px}
+.warn{border-left-color:var(--red); background:var(--red-soft)}
+.ok{border-left-color:var(--green); background:var(--green-soft)}
+
+.formula{
+  background:#0f172a; color:#e2e8f0; border-radius:12px; padding:16px 20px; margin:16px 0;
+  font-family:"SF Mono",Consolas,monospace; font-size:14px; overflow-x:auto; line-height:2;
+}
+.formula .cm{color:#94a3b8}
+
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:16px 0}
+.mini{background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 18px}
+.mini h5{margin:0 0 6px; font-size:14px; color:var(--primary)}
+.mini p{margin:0; font-size:13.6px; color:#475569}
+.mini .big{font-size:22px; font-weight:700; color:var(--accent); display:block; margin-bottom:2px}
+
+table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; background:#fff}
+th{background:var(--primary); color:#fff; text-align:left; padding:10px 13px; font-weight:600}
+td{border-bottom:1px solid var(--border); padding:9px 13px; vertical-align:top}
+tbody tr:nth-child(even){background:#f8fafc}
+td code{font-size:12.8px}
+
+.figure{background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; margin:20px 0}
+.figure svg{width:100%; height:auto; display:block}
+.figcap{font-size:13px; color:var(--muted); text-align:center; margin-top:10px; font-style:italic}
+
+.tag{
+  display:inline-block; background:#eef2ff; color:var(--primary); border:1px solid #c7d2fe;
+  border-radius:20px; padding:1px 10px; font-size:11.5px; margin-left:8px; vertical-align:2px; white-space:nowrap;
+}
+.tag.g{background:var(--green-soft); color:var(--green); border-color:#a7f3d0}
+
+.summary{background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border:1px solid #bae6fd; border-radius:14px; padding:20px 26px; margin:24px 0 10px}
+.summary h4{margin-top:0; color:#0369a1}
+.q{background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin:12px 0}
+.q .qt{font-weight:600; color:var(--purple); font-size:14px}
+.q .qa{font-size:14px; color:#475569; margin-top:4px}
+
+pre{
+  background:#0f172a; color:#e2e8f0; border-radius:12px; padding:16px 20px; overflow-x:auto;
+  font-size:13px; line-height:1.7; margin:14px 0;
+}
+pre .k{color:#c084fc} pre .s{color:#7dd3fc} pre .c{color:#64748b} pre .f{color:#fbbf24}
+
+.footer{text-align:center; color:var(--muted); font-size:13px; margin-top:50px; padding-top:20px; border-top:1px solid var(--border)}
+
+@media print{
+  .sidebar{display:none}
+  .main{padding:0; max-width:none}
+  body{font-size:11pt}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ================= 目录 ================= -->
+<nav class="sidebar">
+  <h4>讲义目录</h4>
+  <div class="sub">Woosuk Kwon · UC Berkeley · Fall 2025<br>vLLM 博士论文中文讲义</div>
+  <a href="#intro">导读 · 这篇论文要解决什么</a>
+  <a href="#ch1" class="lv2">第一讲 背景：LLM 推理为什么难</a>
+  <a href="#ch1-1" class="lv2">1.1 两阶段：Prefill 与 Decode</a>
+  <a href="#ch1-2" class="lv2">1.2 算术强度与 Roofline</a>
+  <a href="#ch1-3" class="lv2">1.3 KV Cache 的出现与代价</a>
+  <a href="#ch1-4" class="lv2">1.4 MoE：省算力不省显存</a>
+  <a href="#ch1-5" class="lv2">1.5 TTFT 与 TPOT</a>
+  <a href="#ch1-6" class="lv2">1.6 六大趋势</a>
+  <a href="#ch2" class="lv2">第二讲 PagedAttention</a>
+  <a href="#ch2-1" class="lv2">2.1 旧方案的三宗浪费</a>
+  <a href="#ch2-2" class="lv2">2.2 洞见：OS 虚拟内存</a>
+  <a href="#ch2-3" class="lv2">2.3 分块注意力算法</a>
+  <a href="#ch2-4" class="lv2">2.4 块表与物理块</a>
+  <a href="#ch2-5" class="lv2">2.5 一次解码的生命周期</a>
+  <a href="#ch2-6" class="lv2">2.6 内存共享与写时复制</a>
+  <a href="#ch2-7" class="lv2">2.7 抢占、交换与重算</a>
+  <a href="#ch2-8" class="lv2">2.8 分布式执行</a>
+  <a href="#ch2-9" class="lv2">2.9 实现与实验结果</a>
+  <a href="#ch3" class="lv2">第三讲 vLLM 系统设计</a>
+  <a href="#ch3-1" class="lv2">3.1 四个目标与三条哲学</a>
+  <a href="#ch3-2" class="lv2">3.2 分层架构</a>
+  <a href="#ch3-3" class="lv2">3.3 两级接口设计</a>
+  <a href="#ch3-4" class="lv2">3.4 模型编写框架</a>
+  <a href="#ch3-5" class="lv2">3.5 统一调度框架（核心）</a>
+  <a href="#ch3-6" class="lv2">3.6 从 FIFO 到两级调度</a>
+  <a href="#ch3-7" class="lv2">3.7 零 CPU 开销三板斧</a>
+  <a href="#ch4" class="lv2">第四讲 总结与未来方向</a>
+  <a href="#appendix" class="lv2">附录 · 术语表与速查</a>
+</nav>
+
+<!-- ================= 主体 ================= -->
+<main class="main">
+
+<div class="hero">
+  <div class="kicker">Doctor of Philosophy Dissertation · UC Berkeley</div>
+  <h1>vLLM：高效的大语言模型推理引擎</h1>
+  <div class="en">vLLM: An Efficient Inference Engine for Large Language Models</div>
+  <div class="meta">
+    <div><span>作者</span> Woosuk Kwon</div>
+    <div><span>导师</span> Ion Stoica（主席）</div>
+    <div><span>委员会</span> J. Gonzalez · S. Shenker · H. Zhang</div>
+    <div><span>时间</span> Fall 2025</div>
+  </div>
+</div>
+
+<!-- ============ 导读 ============ -->
+<section id="intro">
+<h2><span class="num">0</span>导读：这篇论文要解决什么</h2>
+
+<div class="goal">
+<b>一句话概括：</b>LLM 服务的核心瓶颈不是"算力不够"，而是<b>显存被 KV Cache 管得太浪费</b>。论文把操作系统的<b>虚拟内存 + 分页</b>思想搬进 GPU，提出 <b>PagedAttention</b>，并以此为基础造出工业级推理引擎 <b>vLLM</b>。
+</div>
+
+<p>论文的三根支柱，构成了本讲义的主线：</p>
+
+<div class="grid3">
+  <div class="mini">
+    <span class="big">01</span>
+    <h5>算法层：PagedAttention</h5>
+    <p>把 KV Cache 切成固定大小的块，允许非连续存储，消除碎片并实现块级共享 → 吞吐提升 2–4×。</p>
+  </div>
+  <div class="mini">
+    <span class="big">02</span>
+    <h5>系统层：vLLM 引擎</h5>
+    <p>统一调度抽象、分层架构、可插拔后端，既跑得快又能快速适配新模型与新硬件。</p>
+  </div>
+  <div class="mini">
+    <span class="big">03</span>
+    <h5>生态层：开源社区</h5>
+    <p>模型厂商、硬件厂商、云厂商与研究者共同维护，成为事实标准（影响 TensorRT-LLM、SGLang 等）。</p>
+  </div>
+</div>
+
+<div class="insight">
+  <div class="lbl">核心论点</div>
+  <p>高效的 LLM 推理<b>本质上是一个系统问题</b>，而不是单纯的模型结构问题或硬件加速问题。真正卡住吞吐的是<b>内存管理</b>——碎片化 + 无法共享。</p>
+</div>
+
+<div class="callout">
+<b>讲义使用建议：</b>每一讲开头给出"本讲目标"，正文用中文重述论证逻辑（不是逐句翻译），并标注<span class="tag">对应原文 §x.y</span>方便回查。关键机制都配了重绘示意图。
+</div>
+</section>
+
+<!-- ============ 第一讲 ============ -->
+<section id="ch1">
+<h2><span class="num">1</span>第一讲 背景：LLM 推理为什么这么难<span class="tag">对应 Ch.1–2</span></h2>
+
+<div class="goal"><b>本讲目标：</b>理解"自回归生成"如何导致 GPU 利用率低下，KV Cache 为何既是救命稻草又是新的负担，以及真实业务对延迟的硬约束。</div>
+
+<h3 id="ch1-1">1.1 自回归生成的两副面孔：Prefill 与 Decode</h3>
+<p>LLM 一次前向只能吐出一个新 token，且新 token 依赖前面所有 token——这就是<b>自回归</b>。它把一次推理切成两个性格截然不同的阶段：</p>
+
+<div class="figure">
+<svg viewBox="0 0 780 210" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#1e40af"/>
+    </marker>
+  </defs>
+  <text x="14" y="20" font-size="13" font-weight="700" fill="#1e40af">Prefill（预填充）</text>
+  <text x="440" y="20" font-size="13" font-weight="700" fill="#1e40af">Decode（解码）</text>
+
+  <!-- prefill -->
+  <rect x="14" y="34" width="330" height="52" rx="8" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+  <text x="26" y="56" font-size="12.5" fill="#1e293b">输入："Artificial Intelligence is"</text>
+  <text x="26" y="75" font-size="11.5" fill="#475569">全部 prompt token 一次前向 → 矩阵×矩阵，高度并行</text>
+
+  <rect x="14" y="104" width="330" height="34" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="26" y="126" font-size="12" fill="#92400e">计算密集 · 算力受限 · GPU 利用率高</text>
+
+  <!-- decode -->
+  <rect x="440" y="34" width="96" height="52" rx="8" fill="#dcfce7" stroke="#059669" stroke-width="1.5"/>
+  <text x="466" y="65" font-size="13" text-anchor="middle" fill="#065f46">"the"</text>
+  <rect x="548" y="34" width="96" height="52" rx="8" fill="#dcfce7" stroke="#059669" stroke-width="1.5"/>
+  <text x="596" y="65" font-size="13" text-anchor="middle" fill="#065f46">"future"</text>
+  <rect x="656" y="34" width="96" height="52" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="704" y="65" font-size="13" text-anchor="middle" fill="#64748b">"…"</text>
+  <line x1="536" y1="60" x2="546" y2="60" stroke="#059669" stroke-width="2" marker-end="url(#ar)"/>
+  <line x1="644" y1="60" x2="654" y2="60" stroke="#059669" stroke-width="2" marker-end="url(#ar)"/>
+
+  <rect x="440" y="104" width="312" height="34" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="452" y="126" font-size="12" fill="#991b1b">每步只算 1 个 token → 矩阵×向量，访存受限 · GPU 闲置</text>
+
+  <text x="14" y="168" font-size="12" fill="#64748b">耗时占比：prompt 越长 prefill 越重；输出越长 decode 越主导</text>
+  <text x="14" y="190" font-size="12" fill="#64748b">decode 的前向次数 = 生成 token 数，是长输出场景延迟的主要来源</text>
+</svg>
+<div class="figcap">图 1：Prefill 与 Decode 的计算形态对比（重绘自原文 Fig. 2.1）</div>
+</div>
+
+<h3 id="ch1-2">1.2 算术强度：为什么 Decode 天然慢</h3>
+<p>判断一段算力活儿是"算力受限"还是"访存受限"，看<b>算术强度</b>（Arithmetic Intensity）= 浮点运算数 ÷ 访存字节数。</p>
+
+<div class="grid3">
+  <div class="mini"><span class="big">≈1000 TFLOPS</span><h5>H100 BF16 算力</h5><p>硬件峰值计算能力</p></div>
+  <div class="mini"><span class="big">3.35 TB/s</span><h5>H100 显存带宽</h5><p>单位时间能搬的数据</p></div>
+  <div class="mini"><span class="big">≈300</span><h5>Roofline 阈值</h5><p>FLOPs/byte，低于它即访存受限</p></div>
+</div>
+
+<div class="formula">
+<span class="cm"># 矩阵×向量（decode 的典型形态）：W∈R^{m×n}, x∈R^n</span>
+FLOPs = 2mn        访存 = 2mn bytes（权重读一遍）
+算术强度 ≈ <strong style="color:#fbbf24">1 FLOP/byte</strong>   →  远低于 300，严重访存受限 ❌
+
+<span class="cm"># 矩阵×矩阵（prefill / 大批次）：X∈R^{n×b}，b 为批次大小</span>
+FLOPs = 2mnb       访存 = 2mn bytes（权重复用 b 次）
+算术强度 ≈ <strong style="color:#4ade80">b FLOPs/byte</strong>    →  b ≥ 300 时转为算力受限 ✅
+</div>
+
+<div class="callout warn">
+<b>直观感受：</b>一个 8B 参数模型，BF16 权重 16 GB。以 3.35 TB/s 带宽，<b>光是把权重读一遍就要 5 ms</b>——与 GPU 算得快不快无关。要让 decode 转成算力受限，需要把<b>几百个请求</b>凑成一个批次，而这又受限于显存（KV Cache）和延迟要求。<span class="tag">§2.1.1</span>
+</div>
+
+<h3 id="ch1-3">1.3 KV Cache：把 O(L²) 降到 O(L)，却带来新麻烦</h3>
+<p>注意力机制要求每个新 token 都要"回看"之前所有 token 的 Key / Value：</p>
+<div class="formula">
+Attention(Q, K, V) = softmax( Q Kᵀ / √d_k ) · V
+</div>
+<p>如果每一步都重算全部历史 K/V，生成 L 个 token 的代价是 <code>O(L²)</code>。于是有了 <b>KV Cache</b>：把历史 K/V 存下来，每步只算新 token 的 K/V，代价降为 <code>O(L)</code>。</p>
+
+<div class="formula">
+<span class="cm"># 每个 token 的 KV Cache 大小</span>
+KV cache per token = 2 × L × H × d × sizeof(dtype)
+                     ↑    ↑   ↑   ↑
+                   K和V  层数 KV头数 头维度
+</div>
+
+<div class="grid3">
+  <div class="mini"><span class="big">≈400 KB</span><h5>单 token 占用</h5><p>100 层 / 8 个 KV 头 / 头维 128 / BF16</p></div>
+  <div class="mini"><span class="big">40 GB</span><h5>单请求 100K 上下文</h5><p>KV Cache 直接吃掉一张卡的大半显存</p></div>
+  <div class="mini"><span class="big">12 ms</span><h5>仅读取一遍</h5><p>长序列下 attention 访存成为新瓶颈</p></div>
+</div>
+
+<p>KV Cache 带来的三大麻烦：</p>
+<ul>
+  <li><b>显存占用：</b>随序列长度与批次线性增长，往往主导 GPU 显存，直接限制并发请求数。</li>
+  <li><b>访存压力：</b>decode 时每步都要读整个 KV Cache。</li>
+  <li><b>碎片化：</b>请求长度不一且动态变化。按最大长度预分配 → 内部碎片；动态分配 → 外部碎片。<span class="tag g">这正是第 3 章要解决的核心问题</span></li>
+</ul>
+
+<div class="insight">
+  <div class="lbl">贯穿全文的根本矛盾</div>
+  <p><b>大批次</b> → 算术强度高、GPU 利用率高、吞吐高，但需要更多 KV Cache 显存；<b>小批次</b> → 延迟低但 GPU 饿着。<br>所以：<b>KV Cache 管得越好 → 能塞进内存的请求越多 → 吞吐越高。</b></p>
+</div>
+
+<h3 id="ch1-4">1.4 MoE：省了算力，没省显存</h3>
+<p>混合专家（MoE）让每个 token 只走少量专家。例如 256 个专家、top-8 路由：单 token 计算量相对同规模稠密模型降低约 <b>32×</b>，但<b>所有专家权重仍要全部驻留显存</b>。</p>
+
+<div class="callout warn">
+<b>更麻烦的是批次要求被放大：</b>批次中 b 个 token 按路由分散到 E 个专家、每 token 走 k 个，则每个专家平均只拿到 <code>b·k/E</code> 个 token。256 专家 + top-8 → 每个专家的有效批次缩小 <b>32 倍</b>。要达到和稠密模型同样的算术强度，MoE 需要 <b>32 倍大的批次</b>。<span class="tag">§2.2</span>
+</div>
+
+<h3 id="ch1-5">1.5 延迟指标：TTFT 与 TPOT</h3>
+<table>
+<thead><tr><th style="width:130px">指标</th><th>含义</th><th>由什么决定</th><th>典型要求</th></tr></thead>
+<tbody>
+<tr><td><b>TTFT</b><br><span style="font-size:12px;color:#64748b">首 token 时延</span></td><td>请求提交到吐出第一个 token 的时间，决定"多久有反应"</td><td>Prefill 耗时 + 排队延迟 + 批处理干扰</td><td>交互聊天 &lt; 1–2 s<br>语音助手 &lt; 500 ms</td></tr>
+<tr><td><b>TPOT</b><br><span style="font-size:12px;color:#64748b">单 token 时延（ITL）</span></td><td>相邻输出 token 的间隔，决定"生成流不流畅"</td><td>批次大小、序列长度、系统开销</td><td>≈200 ms/token 即可追平人类阅读速度</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+<b>有意思的锚点：</b>人类阅读约 250 词/分钟 ≈ 4 词/秒 ≈ 5 token/秒 ≈ <b>200 ms/token</b>。只要 TPOT 低于这个阈值，输出就比人读得快。<br>但流式语音合成、IDE 代码补全、Agent 多轮调用等场景要求更严，需要稳定且更低 token 间隔。
+</div>
+
+<h3 id="ch1-6">1.6 六大趋势：问题只会越来越严重</h3>
+<div class="grid3">
+  <div class="mini"><h5>📈 模型更大</h5><p>千亿/万亿参数仍是竞争力选项，显存、算力、通信三线吃紧。</p></div>
+  <div class="mini"><h5>📏 上下文更长</h5><p>128K 已成常态，百万级出现；RAG、长文档、多轮对话推高 KV Cache 需求。</p></div>
+  <div class="mini"><h5>🖼️ 多模态输入</h5><p>一张图上千 token，一段视频可达十万级 token，prefill 与 KV Cache 同步放大。</p></div>
+  <div class="mini"><h5>🤖 Agent 工作流</h5><p>多次串行调用、依赖复杂，端到端延迟关键，请求模式也更难批处理。</p></div>
+  <div class="mini"><h5>🔧 硬件演进失衡</h5><p>算力增速快于带宽增速，decode 的访存受限只会更明显。</p></div>
+  <div class="mini"><h5>💰 成本压力</h5><p>大规模部署动辄数千 GPU、兆瓦级功耗，效率直接等于钱。</p></div>
+</div>
+
+<div class="summary">
+<h4>第一讲小结</h4>
+<ul style="margin-bottom:0">
+<li>自回归把推理切成 <b>prefill（并行、算力受限）</b> 与 <b>decode（串行、访存受限）</b> 两半。</li>
+<li>要救 decode，就得<b>加大批次</b>；要加大批次，就得<b>省显存</b>；而显存大头是 <b>KV Cache</b>。</li>
+<li>KV Cache 又大、又动态、又没法预测长度——传统"连续内存 + 预分配"的管理方式会浪费掉一大半。</li>
+<li>于是问题被收敛为一句话：<b>如何把 KV Cache 的显存管到近乎零浪费？</b></li>
+</ul>
+</div>
+</section>
+
+<!-- ============ 第二讲 ============ -->
+<section id="ch2">
+<h2><span class="num">2</span>第二讲 PagedAttention：把虚拟内存搬进 GPU<span class="tag">对应 Ch.3</span></h2>
+
+<div class="goal"><b>本讲目标：</b>掌握 PagedAttention 的算法原理、块表机制、四种内存共享场景、抢占恢复策略，以及它为什么能带来 2–4× 吞吐提升。</div>
+
+<h3 id="ch2-1">2.1 旧方案的三宗浪费</h3>
+<p>由于主流深度学习框架（PyTorch 等）要求 tensor 连续存储，早期服务系统（Orca、FasterTransformer）也把<b>一个请求的 KV Cache 存成一整块连续显存</b>，并按<b>最大可能长度</b>预分配。</p>
+
+<div class="figure">
+<svg viewBox="0 0 780 250" xmlns="http://www.w3.org/2000/svg">
+  <text x="16" y="18" font-size="13" font-weight="700" fill="#dc2626">❌ 传统方案：按最大长度连续预分配（Orca）</text>
+
+  <rect x="16" y="34" width="748" height="40" rx="5" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <rect x="16" y="34" width="150" height="40" rx="5" fill="#22c55e"/>
+  <rect x="166" y="34" width="410" height="40" rx="5" fill="#fbbf24"/>
+  <rect x="576" y="34" width="100" height="40" rx="5" fill="#f87171"/>
+  <rect x="676" y="34" width="88" height="40" rx="5" fill="#cbd5e1"/>
+  <text x="91" y="59" font-size="11.5" text-anchor="middle" fill="#fff" font-weight="700">实际用到 20%</text>
+  <text x="371" y="59" font-size="11.5" text-anchor="middle" fill="#78350f" font-weight="700">预留给未来 token（reserved）</text>
+  <text x="626" y="59" font-size="11" text-anchor="middle" fill="#7f1d1d">内部碎片</text>
+  <text x="720" y="59" font-size="11" text-anchor="middle" fill="#475569">外部碎片</text>
+  <text x="16" y="90" font-size="11.5" fill="#64748b">↑ 真实系统实测：真正存放 token state 的显存只占 20.4% – 38.2%</text>
+
+  <text x="16" y="128" font-size="13" font-weight="700" fill="#059669">✅ PagedAttention：按块按需分配</text>
+  <rect x="16" y="144" width="748" height="40" rx="5" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <rect x="16" y="144" width="720" height="40" rx="5" fill="#22c55e"/>
+  <rect x="736" y="144" width="28" height="40" rx="5" fill="#fbbf24"/>
+  <text x="376" y="169" font-size="12" text-anchor="middle" fill="#fff" font-weight="700">实际用到 ≈96%（近乎零浪费）</text>
+  <text x="16" y="200" font-size="11.5" fill="#64748b">↑ 浪费被限制在"最后一块"之内</text>
+
+  <text x="16" y="232" font-size="11" fill="#94a3b8">橙色=预留  红色=内部碎片  灰色=外部碎片  绿色=有效数据</text>
+</svg>
+<div class="figcap">图 2：显存利用率对比（数据来自原文 Fig. 3.2）</div>
+</div>
+
+<p>三种浪费分别是：</p>
+<ul>
+  <li><b>预留（reserved）：</b>为"将来可能生成的 token"提前占位，整个请求生命周期都占着。</li>
+  <li><b>内部碎片（internal fragmentation）：</b>按最大长度（如 2048）分配，实际只用几百 token，剩下的永远用不上。</li>
+  <li><b>外部碎片（external fragmentation）：</b>每个请求分配尺寸不同，伙伴分配器（buddy allocator）产生无法利用的空洞。</li>
+</ul>
+
+<div class="callout warn">
+<b>两个反直觉的事实：</b><br>
+① 即使<b>预知输出长度</b>（论文中的 Orca-Oracle 理想基线），预留机制仍会造成大量浪费。<br>
+② 内存<b>紧凑化（compaction）</b>理论上能治碎片，但 KV Cache 动辄几十 GB，在服务系统中做搬运不现实。
+</div>
+
+<h3 id="ch2-2">2.2 核心洞见：操作系统早就解决过这个问题</h3>
+<p>KV Cache 有三个独特性质：<b>动态增长</b>、<b>生命周期与长度事先未知</b>、<b>但天然按" token 序列"线性组织</b>。这恰好和 OS 面对的进程内存问题同构。</p>
+
+<table>
+<thead><tr><th>操作系统虚拟内存</th><th>vLLM / PagedAttention</th><th>作用</th></tr></thead>
+<tbody>
+<tr><td>页（page）</td><td><b>KV 块（KV block）</b></td><td>固定大小的管理单元</td></tr>
+<tr><td>字节（byte）</td><td><b>token</b></td><td>被管理的最小数据单位</td></tr>
+<tr><td>进程（process）</td><td><b>请求（request）</b></td><td>申请内存的主体</td></tr>
+<tr><td>页表（page table）</td><td><b>块表（block table）</b></td><td>逻辑地址 → 物理地址映射</td></tr>
+<tr><td>写时复制（COW）</td><td><b>块级 COW</b></td><td>实现多序列共享</td></tr>
+<tr><td>换出到磁盘（swap）</td><td><b>换出到 CPU 内存</b></td><td>显存不足时腾挪</td></tr>
+</tbody>
+</table>
+
+<div class="insight">
+  <div class="lbl">为什么分页能同时解决三个问题</div>
+  <p><b>块小</b> → 内部碎片被限制在一个块内；<b>块大小统一</b> → 不存在外部碎片；<b>按需分配</b> → 不为未来 token 预留整块空间；<b>块可共享</b> → 多个序列映射同一物理块。</p>
+</div>
+
+<h3 id="ch2-3">2.3 PagedAttention 算法</h3>
+<p>把 KV Cache 切成长度为 <code>B</code>（block size）的块，记第 j 个块的 Key/Value 为 <code>K_j = (k_{(j-1)B+1}, …, k_{jB})</code>、<code>V_j</code>。原本逐 token 的注意力，改写成<b>逐块</b>计算：</p>
+
+<div class="formula">
+<span class="cm"># 分块注意力（原文式 3.4）</span>
+A_ij = softmax( q_iᵀ K_j / √d )            <span class="cm"># 第 i 个 query 对第 j 个 KV 块的注意力分数</span>
+o_i  = Σ_{j=1}^{⌈i/B⌉}  V_j · A_ijᵀ        <span class="cm"># 对所有块的输出加权求和</span>
+</div>
+
+<p>PagedAttention 的 CUDA kernel 会<b>分别定位并抓取各个不连续的 KV 块</b>，再完成上述计算。关键实现点：</p>
+<ul>
+  <li>一个 GPU warp 负责读取一个块，保证<b>合并访存（coalesced access）</b>；</li>
+  <li>支持同一批次内<b>变长序列</b>；</li>
+  <li>Token 的 KV 依赖其位置，因此<b>同一 token 在不同位置的 KV 不同</b>——这也是不能简单"内容寻址复用"的原因。</li>
+</ul>
+
+<div class="callout">
+<b>块大小的两难：</b>块太小 → kernel 无法充分利用 GPU 并行度、块表变大；块太大 → 内部碎片增多、共享概率下降。后文消融实验给出答案：<b>默认 16</b>。<span class="tag g">见 §2.11</span>
+</div>
+
+<h3 id="ch2-4">2.4 KV Cache Manager：逻辑块、物理块与块表</h3>
+<ul>
+  <li><b>逻辑块（logical block）：</b>请求视角，从左到右随 token 生成而填满。</li>
+  <li><b>物理块（physical block）：</b>GPU 显存中真实的一块固定大小空间，由块引擎统一管理。</li>
+  <li><b>块表（block table）：</b>每个请求一张，记录"逻辑块 → 物理块编号 + 已填充槽位数（#filled）"。</li>
+</ul>
+
+<div class="figure">
+<svg viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg">
+  <text x="20" y="18" font-size="12.5" font-weight="700" fill="#1e40af">逻辑 KV 块（请求 A 视角）</text>
+  <text x="300" y="18" font-size="12.5" font-weight="700" fill="#7c3aed">块表 Block Table</text>
+  <text x="540" y="18" font-size="12.5" font-weight="700" fill="#059669">物理 KV 块（GPU 显存）</text>
+
+  <!-- logical -->
+  <rect x="20" y="32" width="230" height="36" rx="5" fill="#dbeafe" stroke="#1e40af"/>
+  <text x="30" y="55" font-size="11">Block 0：Four score and seven</text>
+  <rect x="20" y="74" width="230" height="36" rx="5" fill="#dbeafe" stroke="#1e40af"/>
+  <text x="30" y="97" font-size="11">Block 1：years ago our fathers</text>
+  <rect x="20" y="116" width="230" height="36" rx="5" fill="#eff6ff" stroke="#1e40af" stroke-dasharray="4 3"/>
+  <text x="30" y="139" font-size="11">Block 2：brought ▢ ▢ ▢</text>
+
+  <!-- block table -->
+  <rect x="288" y="32" width="200" height="26" fill="#7c3aed"/>
+  <text x="298" y="50" font-size="10.5" fill="#fff">逻辑</text>
+  <text x="370" y="50" font-size="10.5" fill="#fff">物理块号</text>
+  <text x="448" y="50" font-size="10.5" fill="#fff">#filled</text>
+  <rect x="288" y="58" width="200" height="26" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="298" y="76" font-size="11">0</text><text x="380" y="76" font-size="11" font-weight="700" fill="#7c3aed">7</text><text x="458" y="76" font-size="11">4</text>
+  <rect x="288" y="84" width="200" height="26" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="298" y="102" font-size="11">1</text><text x="380" y="102" font-size="11" font-weight="700" fill="#7c3aed">1</text><text x="458" y="102" font-size="11">4</text>
+  <rect x="288" y="110" width="200" height="26" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="298" y="128" font-size="11">2</text><text x="380" y="128" font-size="11" font-weight="700" fill="#7c3aed">3</text><text x="458" y="128" font-size="11">1</text>
+  <rect x="288" y="136" width="200" height="26" fill="#fafafa" stroke="#e5e7eb"/>
+  <text x="298" y="154" font-size="11">3</text><text x="380" y="154" font-size="11" fill="#9ca3af">–</text><text x="458" y="154" font-size="11" fill="#9ca3af">–</text>
+
+  <!-- physical blocks grid -->
+  <g font-size="11">
+    <rect x="536" y="32" width="110" height="34" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/><text x="546" y="53">Block 0</text>
+    <rect x="654" y="32" width="110" height="34" rx="4" fill="#dcfce7" stroke="#059669" stroke-width="2"/><text x="664" y="53" font-weight="700" fill="#065f46">Block 1 ✓</text>
+    <rect x="536" y="74" width="110" height="34" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/><text x="546" y="95">Block 2</text>
+    <rect x="654" y="74" width="110" height="34" rx="4" fill="#dcfce7" stroke="#059669" stroke-width="2"/><text x="664" y="95" font-weight="700" fill="#065f46">Block 3 ✓</text>
+    <rect x="536" y="116" width="110" height="34" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/><text x="546" y="137">Block 4</text>
+    <rect x="654" y="116" width="110" height="34" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/><text x="664" y="137">Block 5</text>
+    <rect x="536" y="158" width="110" height="34" rx="4" fill="#f1f5f9" stroke="#cbd5e1"/><text x="546" y="179">Block 6</text>
+    <rect x="654" y="158" width="110" height="34" rx="4" fill="#dcfce7" stroke="#059669" stroke-width="2"/><text x="664" y="179" font-weight="700" fill="#065f46">Block 7 ✓</text>
+  </g>
+  <text x="536" y="212" font-size="11" fill="#64748b">物理块在显存中无需相邻 ——</text>
+  <text x="536" y="228" font-size="11" fill="#64748b">逻辑连续 ≠ 物理连续</text>
+
+  <!-- arrows -->
+  <line x1="250" y1="50" x2="286" y2="68" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <line x1="488" y1="71" x2="534" y2="163" stroke="#059669" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <line x1="488" y1="97" x2="652" y2="50" stroke="#059669" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <line x1="488" y1="123" x2="534" y2="91" stroke="#059669" stroke-width="1.4" stroke-dasharray="4 3"/>
+
+  <text x="20" y="268" font-size="12" fill="#334155" font-weight="600">要点：块表是唯一的"翻译层"。模型与 kernel 只看到物理块 ID 列表，完全不必关心共享关系。</text>
+  <text x="20" y="288" font-size="11.5" fill="#64748b">因此不同采样偏好（并行采样 / beam search / 共享前缀）的请求可以被无差别地混合批处理。</text>
+</svg>
+<div class="figcap">图 3：逻辑块 → 块表 → 物理块的映射（重绘自原文 Fig. 3.6）</div>
+</div>
+
+<h3 id="ch2-5">2.5 一次完整解码的生命周期（三步走）</h3>
+<div class="card">
+<p><b>① Prefill 阶段：</b>7 个 token 的 prompt → 只分配 <b>2 个</b>物理块（够用即可，不按 2048 预留）。逻辑块 0/1 分别映射到物理块 7/1。前 4 个 token 落块 0，后 3 个落块 1，剩余 1 个槽位留给后续生成。</p>
+<p><b>② 第一个 decode step：</b>用 PagedAttention 在物理块 7、1 上算注意力。最后一个逻辑块还有空位 → 新 KV 直接写入，块表 <code>#filled</code> 更新（3 → 4）。</p>
+<p><b>③ 第二个 decode step：</b>最后一个逻辑块已满 → 分配<b>新的逻辑块</b>与<b>新的物理块</b>（物理块 3），并把映射写进块表。</p>
+</div>
+
+<div class="callout ok">
+<b>全局流程（每个 decode 迭代）：</b>调度器挑选候选序列 → 为新逻辑块分配物理块 → 把本轮所有输入 token（prefill 请求的 prompt token + decode 请求的最新 token）<b>拼成一条序列</b>送入模型 → PagedAttention kernel 按块表读取历史 KV、写入新 KV → 请求完成后块被回收。
+</div>
+
+<h3 id="ch2-6">2.6 内存共享：四种场景，一套机制</h3>
+<p>这是 PagedAttention 相对"仅仅消除碎片"的<b>第二重红利</b>：块级共享 + 引用计数 + 写时复制。</p>
+
+<div class="figure">
+<svg viewBox="0 0 780 240" xmlns="http://www.w3.org/2000/svg">
+  <text x="20" y="18" font-size="12.5" font-weight="700" fill="#1e40af">并行采样：两个候选共享 prompt，靠写时复制（COW）分家</text>
+
+  <text x="20" y="52" font-size="11.5" fill="#334155">Sample A1</text>
+  <rect x="20" y="60" width="230" height="34" rx="5" fill="#dbeafe" stroke="#1e40af"/>
+  <text x="30" y="82" font-size="11">Block 0：Four score and seven</text>
+  <rect x="20" y="100" width="230" height="34" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="30" y="122" font-size="11">Block 1：years ago our <tspan font-weight="700" fill="#b45309">mothers</tspan></text>
+
+  <text x="530" y="52" font-size="11.5" fill="#334155">Sample A2</text>
+  <rect x="530" y="60" width="230" height="34" rx="5" fill="#dbeafe" stroke="#1e40af"/>
+  <text x="540" y="82" font-size="11">Block 0：Four score and seven</text>
+  <rect x="530" y="100" width="230" height="34" rx="5" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="540" y="122" font-size="11">Block 1：years ago our fathers</text>
+
+  <!-- shared physical -->
+  <rect x="290" y="60" width="200" height="34" rx="5" fill="#dcfce7" stroke="#059669" stroke-width="2"/>
+  <text x="390" y="82" font-size="11" text-anchor="middle" font-weight="700" fill="#065f46">物理块 7 · 引用计数 = 2</text>
+  <rect x="290" y="100" width="200" height="34" rx="5" fill="#dcfce7" stroke="#059669" stroke-width="2"/>
+  <text x="390" y="122" font-size="11" text-anchor="middle" font-weight="700" fill="#065f46">物理块 1 · 引用计数 = 2</text>
+
+  <line x1="250" y1="77" x2="288" y2="77" stroke="#059669" stroke-width="1.5"/>
+  <line x1="490" y1="77" x2="528" y2="77" stroke="#059669" stroke-width="1.5"/>
+  <line x1="250" y1="117" x2="288" y2="117" stroke="#059669" stroke-width="1.5"/>
+  <line x1="490" y1="117" x2="528" y2="117" stroke="#059669" stroke-width="1.5"/>
+
+  <text x="290" y="160" font-size="11" text-anchor="middle" fill="#64748b">↑ A1 要写入块 1，发现引用计数 &gt; 1</text>
+  <rect x="270" y="168" width="240" height="30" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+  <text x="390" y="188" font-size="11" text-anchor="middle" fill="#991b1b" font-weight="600">触发 COW：复制出物理块 3，引用计数 2 → 1</text>
+
+  <text x="20" y="222" font-size="11.5" fill="#334155">效果：prompt 越长，共享收益越大 —— 实验中 prompt 部分占 KV Cache 约 12%，可完全省掉。</text>
+</svg>
+<div class="figcap">图 4：并行采样中的块级共享与写时复制（重绘自原文 Fig. 3.8）</div>
+</div>
+
+<h4>① 并行采样（Parallel Sampling）</h4>
+<p>同一 prompt 采样 n 个候选：prompt 部分的逻辑块映射到<b>同一批物理块</b>，引用计数 = n。生成阶段各自发散，需要写入共享块时触发 <b>块级写时复制</b>：分配新块 → 拷贝旧块 → 原块引用计数减 1 → 写入新块。</p>
+
+<h4>② 束搜索（Beam Search）</h4>
+<p>比并行采样更复杂：候选之间<b>不只共享 prompt，中间块也能动态共享</b>，且共享模式随解码推进不断变化（类似 OS 中反复 fork 产生的进程树）。</p>
+<ul>
+  <li>被淘汰的候选 → 其逻辑块释放，对应物理块引用计数递减；</li>
+  <li>引用计数归零的物理块 → 真正回收；</li>
+  <li>新候选 → 分配新块。</li>
+</ul>
+<div class="callout ok">
+<b>收益：</b>beam search 场景下可节省高达 <b>55%</b> 的 KV Cache 显存。旧系统需要频繁在候选间拷贝 KV Cache，vLLM 只需在"写入旧共享块"时拷贝<b>一个块</b>。<span class="tag">§3.6.3</span>
+</div>
+
+<h4>③ 共享前缀（Shared Prefix）</h4>
+<p>系统提示词 / few-shot 示例被大量请求共用。服务提供方可以<b>预先把这段前缀的 KV Cache 存成物理块</b>（如同 OS 的共享库），新请求只需把逻辑块映射过去（最后一块标记 COW），<b>prefill 只需计算用户真正的任务输入部分</b>。</p>
+
+<h4>④ 混合解码（Mixed Decoding）</h4>
+<div class="insight">
+  <div class="lbl">为什么能"混批"</div>
+  <p>块表这一层<b>公共映射层</b>把复杂的共享关系藏了起来：模型与 kernel 只看到"每个序列的物理块 ID 列表"，不需要理解序列之间的共享模式。因此采用不同解码策略的请求可以<b>一起批处理</b>，这进一步扩大了批处理机会、提高了整体吞吐。</p>
+</div>
+
+<h3 id="ch2-7">2.7 显存不够时：抢占、交换与重算</h3>
+<p>请求流量超过系统容量时必须做取舍。vLLM 的策略要点：</p>
+<ul>
+  <li><b>FCFS 顺序：</b>先到先服务，保证公平、防止饥饿；需要抢占时，<b>优先抢占最晚到达的请求</b>。</li>
+  <li><b>全有或全无（all-or-nothing）驱逐：</b>一个序列的所有块总是一起被访问，因此要么全驱逐、要么全保留；同一请求内的多序列（如 beam 候选）作为<b>序列组（sequence group）成组调度</b>，一起被抢占或恢复。</li>
+  <li><b>两种恢复手段：</b></li>
+</ul>
+
+<div class="grid2">
+  <div class="mini">
+    <h5>换出（Swapping）</h5>
+    <p>把被驱逐的块<b>拷到 CPU 内存</b>（CPU 块分配器管理）。抢占后暂停接收新请求，直到被抢占序列完成、块被换回。<br><b>代价：</b>小块尺寸下产生大量细碎传输，PCIe 有效带宽打不上去。</p>
+  </div>
+  <div class="mini">
+    <h5>重算（Recomputation）</h5>
+    <p>重新调度时<b>直接重算</b> KV Cache。巧妙之处：已生成的 token 可与原 prompt 拼成新 prompt，<b>一次 prefill 迭代</b>就能重建全部位置的 KV。<br><b>代价：</b>与块大小无关，开销恒定。</p>
+  </div>
+</div>
+
+<div class="callout">
+<b>消融结论：</b>块小 → 重算更划算；块大 → 交换更划算；块大小在 <b>16–64</b> 之间两者端到端表现接近。且重算开销<b>从不超过交换延迟的 20%</b>。<span class="tag">§3.7.3</span>
+</div>
+
+<h3 id="ch2-8">2.8 分布式执行</h3>
+<p>大模型往往单卡放不下，需要 Megatron-LM 风格的<b>张量并行</b>（SPMD：线性层按块矩阵乘切分，GPU 间通过 all-reduce 同步中间结果；注意力按头切分）。</p>
+<div class="callout ok">
+<b>关键观察：</b>即使模型被切分，<b>每个模型分片处理的仍是同一批输入 token，因此需要相同位置的 KV Cache</b>。于是 vLLM 在<b>集中式调度器</b>里放<b>唯一一个 KV Cache Manager</b>：所有 worker 共享同一套"逻辑块 → 物理块"映射，只是各自只存自己负责的那部分注意力头的 KV。<br>
+流程：调度器准备"输入 token ID + 块表"控制消息 → 广播给 worker → worker 按块表读 KV、用 all-reduce 同步 → 回传采样 token。<b>内存管理无需在 worker 间额外同步</b>。<span class="tag">§3.4.6</span>
+</div>
+
+<h3 id="ch2-9">2.9 实现与实验结果</h3>
+<h4>工程实现</h4>
+<ul>
+  <li><b>8.5K 行 Python</b> + <b>2K 行 C++/CUDA</b>；FastAPI 前端 + OpenAI 兼容 API；NCCL 做分布式通信。</li>
+  <li>三个关键 kernel 优化：<b>① 融合 reshape 与块写入</b>（减少 kernel 启动开销）；<b>② 融合块读取与注意力</b>（改造 FasterTransformer kernel，按块表读取）；<b>③ 融合块拷贝</b>（把 COW 产生的零散拷贝批量化，避免大量 <code>cudaMemcpyAsync</code> 小调用）。</li>
+  <li>解码算法统一抽象为三个操作：<code>fork</code>（派生序列）、<code>append</code>（追加 token）、<code>free</code>（删除序列）——并行采样、beam search、前缀共享全部由它们组合而成。</li>
+</ul>
+
+<h4>实验设置</h4>
+<p>模型：OPT-13B / 66B / 175B、LLaMA-13B；GPU：A100（13B 单卡 / 66B 四卡 / 175B 八卡）。负载：ShareGPT（长输入长输出、方差大）与 Alpaca（短序列）。基线：FasterTransformer、Orca（Max / Pow2 / Oracle 三种预留策略）。核心指标：<b>归一化延迟</b>（端到端延迟 ÷ 输出长度），越低越好。</p>
+
+<h4>结果速览</h4>
+<div class="grid3">
+  <div class="mini"><span class="big">2–4×</span><h5>吞吐提升</h5><p>相对 Orca 系列基线，且模型精度完全不受影响</p></div>
+  <div class="mini"><span class="big">最高 22×</span><h5>vs FasterTransformer</h5><p>后者缺少细粒度调度、内存管理低效</p></div>
+  <div class="mini"><span class="big">2.2× / 4.3×</span><h5>并发请求数</h5><p>OPT-13B 下相对 Orca-Oracle / Orca-Max 同时处理的请求数</p></div>
+  <div class="mini"><span class="big">2×</span><h5>聊天机器人场景</h5><p>ShareGPT 多轮长对话下可持续的请求速率</p></div>
+  <div class="mini"><span class="big">55%</span><h5>Beam search 省显存</h5><p>块共享带来的显存节省上限</p></div>
+  <div class="mini"><span class="big">12%</span><h5>并行采样省显存</h5><p>对应可共享的 prompt 部分占比</p></div>
+</div>
+
+<div class="callout">
+<b>一个值得注意的反例：</b>在 OPT-175B + Alpaca 的组合下，vLLM 相对 Orca-Oracle 的优势变小。原因是 175B 配置留给 KV Cache 的显存非常充裕，而 Alpaca 序列又很短——此时瓶颈从<b>显存受限</b>变成了<b>算力受限</b>，内存管理再好也提高不了吞吐。<br>
+<span class="tag g">启示</span> 优化手段的价值取决于<b>当前瓶颈在哪</b>。
+</div>
+
+<h3 id="ch2-10">2.10 消融：把设计选择讲清楚</h3>
+<table>
+<thead><tr><th style="width:170px">消融项</th><th>发现</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td><b>Kernel 微基准</b></td><td>动态块映射带来额外开销：查块表、额外分支、处理变长序列 → 注意力 kernel 延迟比高度优化的 FasterTransformer <b>高 20–26%</b></td><td>可接受：只影响注意力算子，不影响 Linear 等其他算子，端到端仍大幅领先</td></tr>
+<tr><td><b>块大小</b></td><td>ShareGPT：16–128 都好；Alpaca：16 和 32 好，更大显著变差（序列比块还短）</td><td>默认 <b>block size = 16</b>：足够大以利用 GPU 并行，足够小以避免内部碎片</td></tr>
+<tr><td><b>重算 vs 交换</b></td><td>小块 → 交换开销大（细碎传输）；重算开销与块大小无关</td><td>小块用重算、大块用交换；16–64 两者相当</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+<b>适用边界（作者自己的提醒）：</b>虚拟内存/分页并非对所有 GPU 负载都有效。DNN 训练中 tensor 形状静态、可提前规划；非 LLM 的推理服务往往是算力受限，提升内存效率带不来收益，反而会因为<b>内存间接访问与非连续块</b>引入额外开销而变慢。<span class="tag">§3.8</span>
+</div>
+
+<div class="summary">
+<h4>第二讲小结</h4>
+<ul style="margin-bottom:0">
+<li><b>问题：</b>连续预分配导致预留 + 内部碎片 + 外部碎片，实际利用率仅 20–38%。</li>
+<li><b>方法：</b>分页管理（块=页、token=字节、请求=进程）+ 块表映射 + 按需分配。</li>
+<li><b>红利一：</b>近乎零碎片 → 更大批次 → 更高吞吐（2–4×）。</li>
+<li><b>红利二：</b>块级共享 + 引用计数 + COW → 并行采样、beam search、共享前缀统统受益，还能混合批处理。</li>
+<li><b>工程：</b>全有或全无驱逐、成组调度、集中式 KV Cache Manager 支撑分布式。</li>
+<li><b>取舍：</b>注意力 kernel 有 20–26% 额外开销，但换来整体数量级的吞吐提升——典型"用局部小代价换全局大收益"。</li>
+</ul>
+</div>
+</section>
+
+<!-- ============ 第三讲 ============ -->
+<section id="ch3">
+<h2><span class="num">3</span>第三讲 vLLM 系统设计：从算法到工业级引擎<span class="tag">对应 Ch.4</span></h2>
+
+<div class="goal"><b>本讲目标：</b>理解 vLLM 如何用"统一抽象"化解优化技术爆炸式增长带来的复杂性，并掌握它在调度策略与 CPU 开销上的三板斧。这一章是论文中<b>最具工程洞见</b>的部分。</div>
+
+<div class="insight">
+  <div class="lbl">章节立意</div>
+  <p>光有 PagedAttention 还不够。真实部署要面对：异构负载、五花八门的模型结构、以及"GPU 越来越快 → CPU 成为新瓶颈"的现实。这需要<b>系统级设计</b>，而非单点算法优化。</p>
+</div>
+
+<h3 id="ch3-1">3.1 四个目标与三条哲学</h3>
+<div class="grid2">
+  <div class="mini"><h5>🎯 易用（Ease of Use）</h5><p>最少的信息就能跑起来：用户无需理解引擎内部。</p></div>
+  <div class="mini"><h5>🧩 多模型支持</h5><p>新模型每周都在发布，引擎必须能快速适配而不用重构。</p></div>
+  <div class="mini"><h5>⚡ 推理优化可集成</h5><p>投机解码、前缀缓存、PD 分离等新技术要能无缝接入。</p></div>
+  <div class="mini"><h5>🚫 零 CPU 开销</h5><p>新一代 GPU 上一次前向只要几毫秒，任何 CPU 开销都会被放大。</p></div>
+</div>
+
+<h4>三条设计哲学</h4>
+<ul>
+  <li><b>Be general（通用）：</b>寻找能统一表达不同优化的抽象，而不是给每个优化单独开一条代码路径。新优化 = 映射进现有抽象。</li>
+  <li><b>Be flexible（灵活）：</b>不过拟合当前负载，接口与模块化为未来的模型、模态、优化留出空间。</li>
+  <li><b>Be open（开放）：</b>高效推理的版图太大，任何单一组织都做不完，靠开源协作。</li>
+</ul>
+
+<h3 id="ch3-2">3.2 分层架构</h3>
+<div class="figure">
+<svg viewBox="0 0 780 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- User Interface -->
+  <rect x="180" y="14" width="420" height="48" rx="8" fill="#dbeafe" stroke="#1e40af" stroke-width="1.6"/>
+  <text x="390" y="33" font-size="12.5" text-anchor="middle" font-weight="700" fill="#1e40af">用户接口层</text>
+  <text x="390" y="52" font-size="11" text-anchor="middle" fill="#334155">LLM 类（离线批量） · OpenAI 兼容 API Server（在线服务）</text>
+
+  <!-- Renderer -->
+  <rect x="180" y="76" width="420" height="44" rx="8" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.6"/>
+  <text x="390" y="94" font-size="12.5" text-anchor="middle" font-weight="700" fill="#4338ca">Renderer</text>
+  <text x="390" y="112" font-size="10.5" text-anchor="middle" fill="#334155">chat 模板 → tokenizer → 多模态处理器 ｜ 输出侧 detokenize + 流式</text>
+
+  <!-- Engine Client -->
+  <rect x="180" y="134" width="420" height="38" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="390" y="152" font-size="12.5" text-anchor="middle" font-weight="700" fill="#6d28d9">Engine Client</text>
+  <text x="390" y="168" font-size="10.5" text-anchor="middle" fill="#334155">token-in / token-out 抽象，解耦前后端</text>
+
+  <!-- Engine Core -->
+  <rect x="150" y="190" width="480" height="104" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="390" y="210" font-size="13" text-anchor="middle" font-weight="700" fill="#b45309">Engine Core（核心协调层）</text>
+  <rect x="162" y="220" width="146" height="60" rx="7" fill="#fff" stroke="#fbbf24"/>
+  <text x="235" y="242" font-size="11.5" text-anchor="middle" font-weight="700" fill="#92400e">Scheduler</text>
+  <text x="235" y="260" font-size="10" text-anchor="middle" fill="#475569">调度与抢占</text>
+  <rect x="317" y="220" width="146" height="60" rx="7" fill="#fff" stroke="#fbbf24"/>
+  <text x="390" y="242" font-size="11.5" text-anchor="middle" font-weight="700" fill="#92400e">KV Cache Manager</text>
+  <text x="390" y="260" font-size="10" text-anchor="middle" fill="#475569">块分配 / 前缀缓存</text>
+  <rect x="472" y="220" width="146" height="60" rx="7" fill="#fff" stroke="#fbbf24"/>
+  <text x="545" y="242" font-size="11.5" text-anchor="middle" font-weight="700" fill="#92400e">Executor</text>
+  <text x="545" y="260" font-size="10" text-anchor="middle" fill="#475569">分发与收集</text>
+
+  <!-- Workers -->
+  <rect x="150" y="312" width="480" height="72" rx="10" fill="#dcfce7" stroke="#059669" stroke-width="2"/>
+  <text x="390" y="331" font-size="13" text-anchor="middle" font-weight="700" fill="#065f46">Workers（执行层，每 GPU 一个进程）</text>
+  <rect x="162" y="340" width="228" height="32" rx="6" fill="#fff" stroke="#34d399"/>
+  <text x="276" y="361" font-size="11" text-anchor="middle" fill="#065f46">Model（前向 → logits）</text>
+  <rect x="400" y="340" width="218" height="32" rx="6" fill="#fff" stroke="#34d399"/>
+  <text x="509" y="361" font-size="11" text-anchor="middle" fill="#065f46">Sampler（temperature/top-p/top-k…）</text>
+
+  <!-- arrows -->
+  <g stroke="#94a3b8" stroke-width="1.6">
+    <line x1="390" y1="62" x2="390" y2="74" marker-end="url(#a2)"/>
+    <line x1="390" y1="120" x2="390" y2="132"/>
+    <line x1="390" y1="172" x2="390" y2="188"/>
+    <line x1="390" y1="294" x2="390" y2="310"/>
+  </g>
+  <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#94a3b8"/></marker></defs>
+
+  <text x="650" y="200" font-size="10.5" fill="#64748b">张量并行 /</text>
+  <text x="650" y="214" font-size="10.5" fill="#64748b">流水线并行</text>
+  <text x="650" y="228" font-size="10.5" fill="#64748b">专家并行</text>
+  <text x="650" y="242" font-size="10.5" fill="#64748b">上下文并行</text>
+</svg>
+<div class="figcap">图 5：vLLM 分层架构（重绘自原文 Fig. 4.1）</div>
+</div>
+
+<div class="callout">
+<b>为什么要分层？</b>每一层职责单一、接口清晰：<b>Renderer</b> 管"人话 ↔ token"，<b>Engine Client</b> 提供 token 级抽象（高级用户可绕过内置接口自建 API Server），<b>Engine Core</b> 负责调度与显存，<b>Worker</b> 只管算。这套架构已成为业界参考范式，影响了 TensorRT-LLM、SGLang 等引擎。
+</div>
+
+<h3 id="ch3-3">3.3 两级接口设计</h3>
+<h4>A. 终端用户接口：极简</h4>
+<pre><span class="k">from</span> vllm <span class="k">import</span> LLM
+
+prompts = [<span class="s">"Hello, my name is"</span>, <span class="s">"The capital of France is"</span>]
+llm = LLM(model=<span class="s">"Qwen/Qwen3-VL-8B-Instruct"</span>)   <span class="c"># 只需模型名</span>
+outputs = llm.generate(prompts)</pre>
+<p>在线服务更简单：<code>vllm serve &lt;model-name&gt;</code> 一条命令即可启动 OpenAI 兼容服务。</p>
+
+<div class="grid3">
+  <div class="mini"><h5>原生 HuggingFace 集成</h5><p>自动拉取权重、配置、tokenizer、chat 模板，理解模型语义。对比 TensorRT-LLM 需要繁琐的权重转换与编译。</p></div>
+  <div class="mini"><h5>自动编译与显存剖析</h5><p><code>torch.compile</code> 生成融合 Triton kernel；用 dummy 输入实测峰值显存，反推能给 KV Cache 留多少——既榨干显存又不会 OOM。</p></div>
+  <div class="mini"><h5>内置启发式</h5><p>开箱即有竞争力性能，同时保留配置入口给想精调的用户。</p></div>
+</div>
+
+<h4>B. 开发者接口：三类关键抽象</h4>
+<table>
+<thead><tr><th style="width:180px">接口</th><th>核心方法</th><th>设计价值</th></tr></thead>
+<tbody>
+<tr><td><b>KV Cache Manager</b></td><td><code>get_computed_blocks()</code> 查前缀缓存命中<br><code>allocate_slots()</code> 按需分配块</td><td>把"缓存策略"与"调度逻辑"解耦；第三方（如 LMCache）可实现自己的 KV Connector，把 KV 存到外部存储</td></tr>
+<tr><td><b>Scheduler</b></td><td><code>add_request()</code> / <code>schedule()</code> / <code>update_from_output()</code><br>输出 <code>SchedulerOutput</code></td><td>输出被刻意设计成"请求 ID → token 数"的<b>最简映射</b>：只说<b>执行什么</b>，不说<b>怎么执行</b></td></tr>
+<tr><td><b>Attention Backend</b></td><td>标准 Q/K/V 输入 + <code>AttentionMetadata</code> + 标准输出</td><td>应对注意力实现的碎片化（滑动窗口、MLA、chunked、attention sink、量化 KV…），可插拔接入 FlashAttention / FlashInfer / FlashMLA / FlexAttention</td></tr>
+</tbody>
+</table>
+
+<h3 id="ch3-4">3.4 模型编写框架：让"移植新模型"变轻松</h3>
+<p>开源模型通常先在厂商私有训练框架里开发，再转成 HuggingFace 格式发布。<b>移植过程极易出错</b>：RMSNorm 的 epsilon、归一化时机、激活函数细节的微小差异，都会导致输出不对且难以排查。</p>
+
+<h4>只有两条硬性要求</h4>
+<ul>
+  <li>顶层 Model 类实现 <code>forward(input_ids, positions, input_embeds, intermediate_tensors)</code> → 返回 last hidden states；</li>
+  <li>注意力必须通过 vLLM 的 <code>Attention</code> API 定义（而非 PyTorch 原生注意力），以便挂上 KV Cache 管理的钩子。</li>
+</ul>
+<p>其余完全自由：任意 PyTorch 算子、任意自定义 CUDA kernel、任意控制流。</p>
+
+<div class="callout ok">
+<b>保留原实现 = 保住正确性。</b>因为不必重写模型代码，数值细节、激活函数、归一化变体全部原样保留。已有工作证明：vLLM 的模型 API 甚至能让<b>推理与训练共用同一份模型代码</b>（配合 TorchTitan），实现<b>逐位一致（bitwise equivalence）</b>。
+</div>
+
+<h4>自动融合 vs 手工融合</h4>
+<p>RMSNorm、残差连接、SiLU 等都是访存受限算子，理想情况下应与相邻算子融合。但手工融合会<b>破坏干净的层抽象</b>（例如跨层融合 pre-LayerNorm 与前一层残差），且训练框架与推理框架的融合策略往往不同。<br>
+vLLM 的解法：交给 <code>torch.compile</code> <b>自动融合</b>；同时把 Attention 封装成对编译器<b>不透明的自定义算子</b>（隐藏注意力元数据等动态部分），让模型其余部分成为一串可分析、可优化的 tensor 算子。</p>
+
+<h4>并行策略：对模型代码几乎零侵入</h4>
+<div class="grid2">
+  <div class="mini"><h5>张量并行 TP</h5><p><code>ColumnParallelLinear</code> / <code>RowParallelLinear</code> 直接替换 Linear，自动切权重并处理 all-reduce</p></div>
+  <div class="mini"><h5>流水线并行 PP</h5><p>注入 pre/post hook，在阶段边界收发 <code>IntermediateTensors</code></p></div>
+  <div class="mini"><h5>专家并行 EP</h5><p>封装在 <code>FusedMoE</code> 抽象内部，模型作者无感</p></div>
+  <div class="mini"><h5>上下文并行 CP</h5><p>封装在 <code>Attention</code> 抽象内部，切分序列维度以支持超长上下文</p></div>
+</div>
+
+<h4>Renderer API</h4>
+<p>现代模型的输入输出远比"字符串"复杂：chat 模板、工具调用格式、多模态预处理（占位 token 注入）各不相同且互不兼容。Renderer 提供统一入口 <code>render_prompt()</code>，模型开发者可在其中自由实现任意解析逻辑（如 Qwen-VL 的字符串占位、GPT-OSS 的 token 级工具解析）。</p>
+
+<h3 id="ch3-5">3.5 统一调度框架：整章最核心的洞见<span class="tag g">★ 重点</span></h3>
+
+<h4>传统两阶段视角的困境</h4>
+<p>传统上我们把推理看成 prefill（一次算完整个 prompt）与 decode（每步一个 token）两个阶段。看起来直观，但一旦叠加各种优化就出现大量"灰色地带"：</p>
+<ul>
+  <li><b>投机解码：</b>decode 阶段一次前向处理多个 token——这算 prefill 还是 decode？</li>
+  <li><b>前缀缓存：</b>一个 prefill 请求只差 1 个 token 就全部命中缓存——只处理这 1 个 token，算 prefill 还是 decode？</li>
+</ul>
+<p>硬套两阶段视角的结果是：系统里堆满各自独立的模式代码路径（prefill batch、micro-batch、decode loop、cache hit、speculative verification…），每种组合都要单独维护，<b>优化之间无法自由组合</b>。</p>
+
+<div class="insight">
+  <div class="lbl">核心洞察</div>
+  <p>复杂性不来自优化技术本身，而来自<b>缺乏统一的"请求进度"表示</b>。<br>
+  所有行为其实都可以统一表达为：<b>追踪一个请求在它的 token 序列上推进了多远</b>——无论这些 token 来自 prompt、来自缓存、还是来自模型自己生成的。</p>
+</div>
+
+<h4>两个标量，表达一切</h4>
+<div class="figure">
+<svg viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg">
+  <text x="20" y="20" font-size="12.5" font-weight="700" fill="#1e40af">请求的 token 序列进度</text>
+
+  <rect x="20" y="40" width="520" height="40" rx="5" fill="#e2e8f0" stroke="#94a3b8"/>
+  <rect x="20" y="40" width="340" height="40" rx="5" fill="#22c55e"/>
+  <text x="190" y="65" font-size="11.5" text-anchor="middle" fill="#fff" font-weight="700">num_computed_tokens（已计算）</text>
+  <text x="440" y="65" font-size="11.5" text-anchor="middle" fill="#475569">待计算部分</text>
+  <line x1="540" y1="30" x2="540" y2="90" stroke="#dc2626" stroke-width="2"/>
+  <text x="548" y="52" font-size="11.5" fill="#dc2626" font-weight="700">num_total_tokens</text>
+  <text x="548" y="68" font-size="10.5" fill="#64748b">= prompt + 已生成</text>
+
+  <rect x="360" y="94" width="180" height="30" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
+  <text x="450" y="114" font-size="11.5" text-anchor="middle" fill="#92400e" font-weight="700">Δ = 本步调度的 token 数</text>
+  <line x1="360" y1="109" x2="360" y2="84" stroke="#f59e0b" stroke-width="1.6"/>
+  <line x1="540" y1="109" x2="540" y2="84" stroke="#f59e0b" stroke-width="1.6"/>
+
+  <rect x="20" y="146" width="740" height="40" rx="7" fill="#0f172a"/>
+  <text x="36" y="171" font-size="12.5" fill="#fbbf24" font-family="monospace">0 &lt; Δ ≤ num_total_tokens − num_computed_tokens   →   num_computed_tokens += Δ</text>
+</svg>
+<div class="figcap">图 6：统一调度的两个状态变量</div>
+</div>
+
+<ul>
+  <li><b><code>num_total_tokens</code></b> = |prompt tokens| + |output tokens| —— 表示<b>目标</b>（完整序列有多长）。</li>
+  <li><b><code>num_computed_tokens</code></b> = 已被模型处理（KV 已算好并存入）的 token 数 —— 表示<b>进度</b>。恒有 <code>0 ≤ num_computed_tokens ≤ num_total_tokens</code>。</li>
+  <li><b>调度转移规则：</b>每步选一个 <code>Δ</code>（正数，不超过剩余量）处理，然后 <code>num_computed_tokens += Δ</code>；若本步生成了 <code>L_generated</code> 个新 token，则 <code>num_total_tokens += L_generated</code>。</li>
+</ul>
+
+<h4>一张表统一所有优化</h4>
+<table>
+<thead><tr><th style="width:180px">调度行为 / 优化</th><th>状态更新</th><th>白话解释</th></tr></thead>
+<tbody>
+<tr><td><b>Prefill</b></td><td><code>Δ = L_prompt</code></td><td>一次性推进整个 prompt</td></tr>
+<tr><td><b>Decode</b></td><td><code>Δ = 1</code></td><td>每步只推进一个 token</td></tr>
+<tr><td><b>抢占 Preemption</b></td><td><code>num_computed ← 0</code></td><td>进度清零（总长不变）</td></tr>
+<tr><td><b>Chunked Prefill</b></td><td><code>Δ &lt; L_prompt</code></td><td>把 prompt 拆成多步推进</td></tr>
+<tr><td><b>流式 Prefill</b></td><td><code>num_total += L_new</code></td><td>新 token 到达 → 目标变长，差值为可调度量</td></tr>
+<tr><td><b>前缀缓存</b></td><td><code>num_computed ← L_cached</code></td><td>命中部分直接算作"已计算"，只算剩余</td></tr>
+<tr><td><b>PD 分离</b></td><td><code>num_computed ← L_prompt</code><br><code>num_total ← L_prompt + 1</code></td><td>相当于"缓存在远端 GPU 上"的前缀缓存；+1 是 prefill worker 已采样的首个 token</td></tr>
+<tr><td><b>投机解码</b></td><td><code>num_total += L_draft − L_rejected + 1</code><br><code>num_computed += Δ − L_rejected</code></td><td>先乐观地加上草稿 token，验证后按被拒数量回退</td></tr>
+</tbody>
+</table>
+
+<div class="callout ok">
+<b>这个抽象的威力在于"可组合"。</b>例如：chunked prefill + prefix caching = 选 <code>Δ &lt; L_prompt − L_cached</code> 分块处理未缓存部分；PD 分离 + 本地前缀缓存 = decode 端只需接收剩余 <code>L_prompt − L_cached</code> 的 KV；投机解码草稿过长时可以分块验证。<b>不需要为每种组合单独写代码。</b>
+</div>
+
+<div class="callout warn">
+<b>作者坦承的局限：</b>① 该框架假设输出是<b>线性序列</b>，难以表达 beam search 这类动态创建/剪枝的分支结构，或树状投机草稿；② 对于不成熟、不支持全部优化的模型或硬件平台，统一抽象反而增加认知负担——<b>不支持分块 prefill 的平台，用传统的两阶段视角反而更清晰</b>。<span class="tag">§4.4.5</span>
+</div>
+
+<h3 id="ch3-6">3.6 调度策略：从 FIFO 到 SRTF 再到两级调度</h3>
+
+<h4>① FIFO：简单但有硬伤</h4>
+<p>按到达顺序处理，逐个请求取 <code>Δ = min(Δ_max, 剩余预算 B)</code>，直到预算耗尽。<b>token budget B</b> 是一次前向能处理的总 token 数上限（典型值 <b>8192</b>）——它同时约束了单步延迟与激活峰值显存，是与吞吐做交换的旋钮。</p>
+<div class="grid3">
+  <div class="mini"><h5>❌ 队头阻塞</h5><p>10 万 token 的长 prompt 卡在队首，后面 100 token 的短请求只能干等，尾延迟被严重拉高</p></div>
+  <div class="mini"><h5>❌ 无优先级</h5><p>交互聊天与离线批处理同等对待，无法表达紧急程度</p></div>
+  <div class="mini"><h5>❌ 无缓存感知</h5><p>能命中前缀缓存的请求不优先，缓存块可能已被淘汰</p></div>
+</div>
+<div class="callout warn">
+论文诚实指出：vLLM 曾用"长 prefill 阈值"这类<b>临时启发式</b>打补丁，但它们脆弱、难推理、难维护——治标不治本。这正是需要更原则性框架的原因。
+</div>
+
+<h4>② SRTF：最短剩余 token 优先</h4>
+<p>维护 <b>W（等待队列，未调度过）</b> 与 <b>R（运行队列，已调度、持有 KV Cache）</b>；每步从两者中挑 <code>Δ</code> 最小的请求。还有一个细节：内层循环会<b>刷新等待队列请求的 <code>num_computed_tokens</code></b>——因为调度某个请求可能让其他请求的缓存命中结果变化（两个请求共享 prompt 时，一个先跑完，另一个的剩余量骤降甚至归零）。</p>
+
+<div class="grid3">
+  <div class="mini"><span class="big">✓</span><h5>天然优先 decode</h5><p>decode 请求剩余量恒为 1，prefill 请求 &gt; 1 → decode 自动优先，符合"生成中不该被打断"的直觉</p></div>
+  <div class="mini"><span class="big">✓</span><h5>TTFT 最优</h5><p>类似 OS 中 SRPT 可证最优，平均首 token 时延最小；且与 chunked prefill 天然契合（剩余少的长 prompt 会被当成"短的"）</p></div>
+  <div class="mini"><span class="big">✓</span><h5>提升缓存命中</h5><p>命中多的请求剩余量少 → 先被调度 → 缓存块在被淘汰前就被用上</p></div>
+</div>
+<p><b>但 SRTF 也有两个致命问题：</b>长 prompt 请求可能<b>饥饿</b>（短请求源源不断就永远轮不到）；以及<b>调度开销大</b>（每步都要遍历等待队列做前缀哈希比对）。</p>
+
+<h4>③ 两级调度（Two-Level Scheduling）</h4>
+<div class="figure">
+<svg viewBox="0 0 780 170" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#1e40af"/></marker></defs>
+  <rect x="16" y="40" width="180" height="86" rx="9" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+  <text x="106" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#334155">Waiting Queue</text>
+  <text x="106" y="82" font-size="10.5" text-anchor="middle" fill="#64748b">全部待处理请求</text>
+  <text x="106" y="100" font-size="10.5" text-anchor="middle" fill="#64748b">只用简单 FIFO</text>
+  <text x="106" y="117" font-size="10" text-anchor="middle" fill="#94a3b8">（零 per-request 计算）</text>
+
+  <rect x="290" y="40" width="200" height="86" rx="9" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="390" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#92400e">Staging Queue</text>
+  <text x="390" y="82" font-size="10.5" text-anchor="middle" fill="#78350f">小容量（实践中 = 8）</text>
+  <text x="390" y="100" font-size="10.5" text-anchor="middle" fill="#78350f">批量补货：清空后才进下一批</text>
+  <text x="390" y="117" font-size="10" text-anchor="middle" fill="#b45309">↓ SRTF 只在小范围内比较</text>
+
+  <rect x="584" y="40" width="180" height="86" rx="9" fill="#dcfce7" stroke="#059669" stroke-width="2"/>
+  <text x="674" y="62" font-size="12" text-anchor="middle" font-weight="700" fill="#065f46">Running Queue</text>
+  <text x="674" y="82" font-size="10.5" text-anchor="middle" fill="#047857">已调度、持有 KV Cache</text>
+  <text x="674" y="100" font-size="10.5" text-anchor="middle" fill="#047857">decode 请求 Δ=1</text>
+  <text x="674" y="117" font-size="10" text-anchor="middle" fill="#059669">持续生成中</text>
+
+  <line x1="196" y1="83" x2="286" y2="83" stroke="#1e40af" stroke-width="2" marker-end="url(#a3)"/>
+  <text x="241" y="30" font-size="10.5" text-anchor="middle" fill="#1e40af">① FIFO</text>
+  <line x1="490" y1="83" x2="580" y2="83" stroke="#1e40af" stroke-width="2" marker-end="url(#a3)"/>
+  <text x="535" y="30" font-size="10.5" text-anchor="middle" fill="#1e40af">② SRTF</text>
+
+  <text x="16" y="152" font-size="11.5" fill="#334155"><tspan font-weight="700">效果：</tspan>开销有界（SRTF 只在 ≤8 个请求间比较）+ 防饥饿（FIFO 保证人人能进 staging，批量补货保证进了就一定先被调度完）+ 保留 SRTF 的三大优点</text>
+</svg>
+<div class="figcap">图 7：两级调度（重绘自原文 Fig. 4.2）</div>
+</div>
+<ul>
+  <li><b>开销有界：</b>昂贵的缓存命中检查与 Δ 计算只在 ≤8 个请求的 staging 队列内进行；大队列只做 FIFO。</li>
+  <li><b>防饥饿：</b>FIFO 保证每个请求最终都能进入 staging；批量补货保证"进了 staging 就一定先调度完"——两者结合给出最坏等待时间的上界。</li>
+  <li><b>可叠加优先级：</b>为不同优先级维护各自的 waiting 队列，在应用 SRTF 之前先考虑优先级。</li>
+</ul>
+
+<h3 id="ch3-7">3.7 零 CPU 开销三板斧</h3>
+<div class="insight">
+  <div class="lbl">为什么现在才强调 CPU</div>
+  <p>现代硬件上主流模型要跑到 &gt;100 token/s，意味着<b>每步 &lt; 10 ms</b>。此时<b>哪怕 1 ms 的 CPU 开销就是 10% 以上的性能损失</b>。而 vLLM 主体是 Python，还要维护大量调度与 KV Cache 记账，且 GPU 比 CPU 进步更快——CPU 开销只会越来越致命。
+</p></div>
+
+<h4>第一斧：异步调度（Asynchronous Scheduling）</h4>
+<div class="figure">
+<svg viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg">
+  <text x="16" y="16" font-size="12" font-weight="700" fill="#dc2626">同步调度（旧）：CPU 在关键路径上，GPU 空转等待</text>
+  <text x="16" y="52" font-size="10.5" fill="#475569">CPU</text>
+  <rect x="60" y="40" width="90" height="22" rx="4" fill="#fca5a5"/><text x="105" y="55" font-size="9.5" text-anchor="middle" fill="#7f1d1d">调度</text>
+  <rect x="150" y="40" width="90" height="22" rx="4" fill="#fca5a5"/><text x="195" y="55" font-size="9.5" text-anchor="middle" fill="#7f1d1d">调度</text>
+  <text x="16" y="86" font-size="10.5" fill="#475569">GPU</text>
+  <rect x="150" y="74" width="90" height="22" rx="4" fill="#86efac"/><text x="195" y="89" font-size="9.5" text-anchor="middle" fill="#065f46">step N</text>
+  <rect x="320" y="74" width="90" height="22" rx="4" fill="#86efac"/><text x="365" y="89" font-size="9.5" text-anchor="middle" fill="#065f46">step N+1</text>
+  <rect x="240" y="74" width="80" height="22" rx="4" fill="#e2e8f0" stroke-dasharray="3 2"/><text x="280" y="89" font-size="9" text-anchor="middle" fill="#64748b">空闲</text>
+  <rect x="410" y="74" width="80" height="22" rx="4" fill="#e2e8f0" stroke-dasharray="3 2"/><text x="450" y="89" font-size="9" text-anchor="middle" fill="#64748b">空闲</text>
+
+  <line x1="16" y1="112" x2="764" y2="112" stroke="#cbd5e1"/>
+
+  <text x="16" y="132" font-size="12" font-weight="700" fill="#059669">异步调度（新）：调度提前一步，藏在 GPU 计算背后</text>
+  <text x="16" y="168" font-size="10.5" fill="#475569">CPU</text>
+  <rect x="60" y="156" width="90" height="22" rx="4" fill="#fcd34d"/><text x="105" y="171" font-size="9.5" text-anchor="middle" fill="#78350f">调度N+1</text>
+  <rect x="230" y="156" width="90" height="22" rx="4" fill="#fcd34d"/><text x="275" y="171" font-size="9.5" text-anchor="middle" fill="#78350f">调度N+2</text>
+  <text x="16" y="192" font-size="10.5" fill="#475569">GPU</text>
+  <rect x="60" y="180" width="170" height="22" rx="4" fill="#86efac"/><text x="145" y="195" font-size="9.5" text-anchor="middle" fill="#065f46">step N（连续执行）</text>
+  <rect x="230" y="180" width="170" height="22" rx="4" fill="#86efac"/><text x="315" y="195" font-size="9.5" text-anchor="middle" fill="#065f46">step N+1</text>
+  <text x="430" y="195" font-size="10" fill="#64748b">→ GPU 不再为 CPU 停顿；第 N 步的输出只在 N+2 的调度中体现</text>
+</svg>
+<div class="figcap">图 8：同步 vs 异步调度（重绘自原文 Fig. 4.3）</div>
+</div>
+<p><b>为何可行：</b>调度决策通常<b>不依赖模型输出</b>——<code>num_computed_tokens</code> 与 <code>num_total_tokens</code> 仅凭调度决策就能更新。两个需要特殊处理的边界情况：</p>
+<ul>
+  <li><b>前缀缓存：</b>异步下，第 N 步生成的 token D 要等到 N+2 才被登记进缓存，因此刚到的请求 <code>[A,B,C,D]</code> 只能命中 <code>[A,B,C]</code>。实践中这种情况罕见，收益远大于损失。</li>
+  <li><b>投机解码：</b>被拒 token 数 <code>L_rejected</code> 要等验证完才知道，但调度只需要知道上限 <code>Δ = L_draft + 1</code>——只要 <code>L_draft</code> 事先已知（Eagle 等方法都满足），异步依然成立。</li>
+</ul>
+
+<h4>第二斧：输入准备的 GPU 化</h4>
+<p>每步都要准备三类输入：标准 LLM 输入（token、position、多模态 embedding）、注意力元数据（块表、序列长度）、每请求采样参数（temperature、top-p…）。挑战来自：</p>
+<ul>
+  <li><b>规模：</b>上千请求时，Python 逐条遍历记账，即便每请求 1 μs 也是 1 ms——吃掉 10 ms 预算的十分之一；</li>
+  <li><b>PyTorch 派发开销：</b>大量小张量操作（索引、拼接、切片），一次简单 <code>tensor[i]</code> 都可能数十微秒；</li>
+  <li><b>隐式 CPU-GPU 同步：</b>某些操作会强制 CPU 阻塞等待 GPU，直接摧毁流水线。</li>
+</ul>
+<div class="grid3">
+  <div class="mini"><h5>① GPU 侧准备</h5><p>用精心编写的 Triton kernel 在 GPU 上准备输入：上千请求并行处理，彻底绕开 Python 解释器与 PyTorch 派发 → <b>微秒级</b>而非毫秒级</p></div>
+  <div class="mini"><h5>② 统一虚拟寻址 UVA</h5><p>让 GPU kernel 直接访问已注册的 CPU 锁页内存，CUDA 运行时透明处理传输 → 消除显式拷贝</p></div>
+  <div class="mini"><h5>③ 增量状态更新</h5><p>跨步保持持久化状态，只更新变化项。每步开销 ∝ <b>变化的请求数</b>，而非总批次数</p></div>
+</div>
+
+<div class="callout">
+<b>案例：块表管理。</b>批大小 1000、最大序列 100 万 token、每块 16 token → 块表有 <b>6250 万</b>个条目、<b>250 MB</b>。vLLM 的做法：① GPU 上维持<b>持久化块表缓冲区</b>；② 调度器只把<b>新增块 ID 的增量（delta）</b>写进锁页内存，轻量 GPU kernel 通过 UVA 直接读取并应用；③ 前向时由 GPU kernel 完成<b>按调度顺序的 gather</b>。<br>
+结果：CPU 唯一的活儿就是写那一小撮增量，其余全在 GPU 上并行完成 —— <b>近乎零 CPU 开销</b>。<span class="tag">§4.6.2</span>
+</div>
+
+<h4>第三斧：分段 CUDA Graph</h4>
+<p>PyTorch 的逐算子派发在小批次时可能吃掉大部分端到端延迟。<b>CUDA Graph</b> 能把一整串 GPU 操作录下来一次重放，绕开 eager 开销，但它有三条严苛约束：<b>形状固定</b>、<b>图内不能有 CPU 操作</b>、<b>内存地址静态</b>——而 LLM 推理的批大小、序列长度、注意力实现选择全是动态的。</p>
+
+<div class="figure">
+<svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg">
+  <text x="16" y="16" font-size="12" font-weight="700" fill="#1e40af">Full CUDA Graph（整图捕获）</text>
+  <rect x="16" y="28" width="330" height="60" rx="7" fill="#dbeafe" stroke="#1e40af" stroke-width="1.6"/>
+  <text x="181" y="48" font-size="10.5" text-anchor="middle" fill="#1e40af" font-weight="700">一次重放跑完整个模型</text>
+  <text x="181" y="66" font-size="10" text-anchor="middle" fill="#334155">需要专门的、把决策逻辑内置的 kernel</text>
+  <text x="181" y="82" font-size="10" text-anchor="middle" fill="#dc2626">❌ 工程负担重，无法用现成优化 kernel</text>
+
+  <text x="400" y="16" font-size="12" font-weight="700" fill="#059669">Piecewise CUDA Graph（分段，vLLM 的选择）</text>
+  <rect x="400" y="28" width="364" height="60" rx="7" fill="#dcfce7" stroke="#059669" stroke-width="1.6"/>
+  <text x="582" y="46" font-size="10.5" text-anchor="middle" fill="#065f46" font-weight="700">无状态、静态部分 → 图捕获</text>
+  <text x="582" y="62" font-size="10" text-anchor="middle" fill="#334155">QKV 投影 / 输出投影 / MLP / MoE</text>
+  <text x="582" y="80" font-size="10" text-anchor="middle" fill="#059669">注意力 → 保持 eager（动态形状与调度）</text>
+
+  <text x="16" y="112" font-size="11.5" font-weight="700" fill="#334155">执行流（每个 Transformer 层重复）</text>
+  <rect x="16" y="122" width="150" height="34" rx="5" fill="#dbeafe" stroke="#1e40af"/><text x="91" y="143" font-size="10" text-anchor="middle" fill="#1e40af">CUDA Graph</text>
+  <rect x="176" y="122" width="170" height="34" rx="5" fill="#fef3c7" stroke="#f59e0b"/><text x="261" y="143" font-size="10" text-anchor="middle" fill="#92400e">Attention（eager）</text>
+  <rect x="356" y="122" width="150" height="34" rx="5" fill="#dbeafe" stroke="#1e40af"/><text x="431" y="143" font-size="10" text-anchor="middle" fill="#1e40af">CUDA Graph</text>
+  <text x="520" y="143" font-size="10.5" fill="#64748b">→ 进入下一层的 pre-attn 投影 …</text>
+
+  <text x="16" y="180" font-size="11" fill="#334155">实测（H100）：比 PyTorch eager <tspan font-weight="700" fill="#059669">快 6–39%</tspan>；最坏情况下比 full CUDA graph 慢 2–7%，但 batch ≥ 8 时差距仅 0–2%。</text>
+</svg>
+<div class="figcap">图 9：Full vs Piecewise CUDA Graph（重绘自原文 Fig. 4.5 / 4.6）</div>
+</div>
+<div class="callout ok">
+<b>关键观察：</b>Transformer 中的"动态性"分布并不均匀——<b>注意力</b>是动态的（变长序列、动态调度、自适应 kernel 选择），而<b>周围的线性投影与 FFN</b> 是无状态的、逐 token 的，完全可以静态捕获。于是按执行特性切分：图捕获区域 + eager 注意力区域交替执行，用 <code>torch.compile</code> 的 graph break 标注自动生成边界。
+</div>
+
+<div class="summary">
+<h4>第三讲小结</h4>
+<ul style="margin-bottom:0">
+<li><b>抽象取胜：</b>用 <code>num_total_tokens</code> / <code>num_computed_tokens</code> 两个标量 + Δ 规则，把 prefill/decode/抢占/分块/流式/前缀缓存/PD 分离/投机解码全部统一，从而实现<b>优化的任意组合</b>。</li>
+<li><b>调度演进：</b>FIFO（简单但有队头阻塞）→ SRTF（TTFT 最优但会饥饿、开销大）→ <b>两级调度</b>（waiting-FIFO + staging-SRTF，容量 8，兼顾有界开销与防饥饿）。</li>
+<li><b>三板斧：</b>异步调度（提前一步，藏进 GPU 计算）、输入准备 GPU 化（Triton + UVA + 增量更新）、分段 CUDA Graph（静态部分捕获、注意力保持 eager）。</li>
+<li><b>接口与可移植性：</b>极简用户接口（<code>vllm serve</code>）+ 三类开发者接口，模型编写只需遵守两条要求，自动融合与并行切分都尽量不侵入模型代码。</li>
+</ul>
+</div>
+</section>
+
+<!-- ============ 第四讲 ============ -->
+<section id="ch4">
+<h2><span class="num">4</span>第四讲 总结与未来方向<span class="tag">对应 Ch.5</span></h2>
+
+<h3>4.1 三大贡献回顾</h3>
+<div class="grid3">
+  <div class="mini">
+    <h5>① 算法：PagedAttention</h5>
+    <p>把 KV Cache 的<b>逻辑结构</b>与<b>物理布局</b>解耦，切分为可非连续存放的固定块。近乎零碎片 + 块级共享，让 beam search、并行采样等复杂解码大幅省显存。</p>
+  </div>
+  <div class="mini">
+    <h5>② 系统：vLLM 引擎</h5>
+    <p>模块化架构分离接口/调度/执行；<b>统一调度</b>抽象；<b>SRTF + 多级队列</b>取得 SOTA 级 TTFT 且不饥饿；<b>异步调度 + 分段 CUDA Graph</b> 抹掉 CPU 开销。</p>
+  </div>
+  <div class="mini">
+    <h5>③ 生态：开源影响</h5>
+    <p>凭"通用、灵活、开放"三原则，支持稠密 Transformer、MoE、多模态；其架构模式被其他推理框架采纳，成为社区级基础设施。</p>
+  </div>
+</div>
+
+<h3>4.2 三个未来方向</h3>
+<div class="card">
+<h4>方向一：面向 Agent 工作流的有状态推理</h4>
+<p>Agent 会调用工具、循环迭代、依赖复杂，超出了传统的"请求–响应"范式。未来推理系统可能需要显式支持<b>有状态推理</b>，让 Agent 在长交互中保持持久上下文而无需反复重传历史。有希望的路径：</p>
+<ul>
+  <li><b>跨副本 / 跨集群 KV 共享：</b>一个引擎做的 prefill，通过共享存储或 KV Connector 被其他引擎复用；</li>
+  <li><b>与外部/分层存储集成：</b>把 KV 块透明地溢出到对象存储或专用 KV 存储，使上下文长度突破单节点显存；</li>
+  <li><b>为分布式多租户环境</b>设计缓存一致性模型、淘汰策略与安全约束。</li>
+</ul>
+</div>
+
+<div class="card">
+<h4>方向二：训练与推理的统一</h4>
+<p>已有工作证明 vLLM 的模型编写接口可与训练框架（如 TorchTitan）打通并实现<b>逐位一致</b>。进一步统一将带来：</p>
+<ul>
+  <li>简化"研究原型 → 生产系统"的路径，支持复杂的 on-policy 训练循环；</li>
+  <li>支撑<b>在线持续学习</b>：推理请求直接成为实时训练信号，replay buffer 来自真实流量；</li>
+  <li>逐位一致确保训练时算的对数概率与推理输出<b>精确吻合</b>，避免数值偏差污染梯度估计；结合 LoRA 等方法，指向"边服务边自我改进"的系统。</li>
+</ul>
+</div>
+
+<div class="card">
+<h4>方向三：可靠性、可调试性与安全</h4>
+<ul>
+  <li>确定性 / 可重放的<b>执行模式</b>，便于调试；</li>
+  <li>对 KV 使用、调度决策、单 token 延迟的<b>细粒度追踪</b>；</li>
+  <li>与调度和执行协同的<b>模型级安全机制</b>接口（内容过滤、验证模型、工具使用约束）。</li>
+</ul>
+</div>
+
+<div class="insight">
+  <div class="lbl">结语</div>
+  <p>vLLM 不是一个静态成品，而是<b>一个地基</b>。当模型走向万亿参数、上下文走向近乎无限、应用走向自主 Agent 时，本论文确立的三条原则——<b>高效内存管理、灵活抽象、统一调度</b>——仍将是关键。</p>
+</div>
+</section>
+
+<!-- ============ 附录 ============ -->
+<section id="appendix">
+<h2><span class="num">A</span>附录：术语表与速查</h2>
+
+<h3>A.1 中英术语对照</h3>
+<table>
+<thead><tr><th style="width:200px">中文</th><th>英文</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>预填充 / 解码</td><td>Prefill / Decode</td><td>推理的两阶段：算 prompt / 逐 token 生成</td></tr>
+<tr><td>键值缓存</td><td>KV Cache</td><td>缓存历史 token 的 Key / Value 以加速生成</td></tr>
+<tr><td>分页注意力</td><td>PagedAttention</td><td>在分页（非连续）显存上做注意力的算法</td></tr>
+<tr><td>块表</td><td>Block Table</td><td>逻辑块 → 物理块的映射表</td></tr>
+<tr><td>写时复制</td><td>Copy-on-Write (COW)</td><td>共享块被写入时才复制的机制</td></tr>
+<tr><td>算术强度</td><td>Arithmetic Intensity</td><td>FLOPs ÷ 访存字节，判断是否访存受限</td></tr>
+<tr><td>首 token 时延 / 单 token 时延</td><td>TTFT / TPOT (ITL)</td><td>两个核心延迟指标</td></tr>
+<tr><td>分块预填充</td><td>Chunked Prefill</td><td>把长 prompt 拆到多步处理</td></tr>
+<tr><td>前缀缓存</td><td>Prefix Caching</td><td>复用相同前缀的 KV Cache</td></tr>
+<tr><td>预填充-解码分离</td><td>Prefill Disaggregation</td><td>两阶段放在不同 worker 上避免互相干扰</td></tr>
+<tr><td>投机解码</td><td>Speculative Decoding</td><td>小模型起草、大模型并行验证</td></tr>
+<tr><td>最短剩余 token 优先</td><td>SRTF</td><td>优先调度剩余工作量最小的请求</td></tr>
+<tr><td>两级调度</td><td>Two-Level Scheduling</td><td>waiting(FIFO) + staging(SRTF) 的组合</td></tr>
+<tr><td>分段 CUDA 图</td><td>Piecewise CUDA Graph</td><td>静态部分图捕获、动态部分保持 eager</td></tr>
+<tr><td>统一虚拟寻址</td><td>UVA</td><td>让 GPU kernel 直接访问 CPU 锁页内存</td></tr>
+<tr><td>专家混合</td><td>MoE</td><td>稀疏激活的专家架构</td></tr>
+</tbody>
+</table>
+
+<h3>A.2 关键数字速查</h3>
+<div class="grid3">
+  <div class="mini"><span class="big">300</span><h5>Roofline 阈值</h5><p>H100：1000 TFLOPS ÷ 3.35 TB/s，单位为 FLOPs/byte</p></div>
+  <div class="mini"><span class="big">400 KB</span><h5>单 token KV</h5><p>100 层 / 8 KV 头 / 头维 128 / BF16</p></div>
+  <div class="mini"><span class="big">20–38%</span><h5>旧系统有效利用率</h5><p>vLLM ≈ 96%</p></div>
+  <div class="mini"><span class="big">16</span><h5>默认 block size</h5><p>兼顾 GPU 并行度与内部碎片</p></div>
+  <div class="mini"><span class="big">8192</span><h5>默认 token budget</h5><p>单步前向的 token 上限</p></div>
+  <div class="mini"><span class="big">8</span><h5>默认 staging 队列</h5><p>两级调度的推荐容量</p></div>
+  <div class="mini"><span class="big">20–26%</span><h5>注意力 kernel 额外开销</h5><p>分页带来的代价，端到端收益远大于此</p></div>
+  <div class="mini"><span class="big">2–4×</span><h5>吞吐提升</h5><p>vs Orca；vs FasterTransformer 最高 22×</p></div>
+  <div class="mini"><span class="big">8.5K + 2K</span><h5>代码规模</h5><p>Python 行数 + C++/CUDA 行数</p></div>
+</div>
+
+<h3>A.3 思考题</h3>
+<div class="q"><div class="qt">Q1 · 为什么"加大批次"能提升吞吐，却又不能无限加大？</div><div class="qa">加大批次提高算术强度、摊薄权重读取开销；但受限于 ① KV Cache 显存容量 ② 单步延迟（TPOT）变差 ③ 激活峰值显存。token budget 就是用户在吞吐与延迟之间设定的旋钮。</div></div>
+<div class="q"><div class="qt">Q2 · 分页为什么能同时消灭内部碎片和外部碎片？</div><div class="qa">按小块按需分配 → 浪费被限制在最后一块内（内部碎片可控）；所有块大小一致 → 任何空闲块都能被任何请求使用（不存在外部碎片）。</div></div>
+<div class="q"><div class="qt">Q3 · 块大小取 16 是如何在两个相反力量之间取平衡的？</div><div class="qa">太小：kernel 无法充分利用 GPU 并行度、块表膨胀、共享粒度虽细但管理开销大；太大：内部碎片增加、共享概率下降（序列比块还短时尤其糟）。消融显示 16 在两类负载上都稳。</div></div>
+<div class="q"><div class="qt">Q4 · 统一调度框架里，"抢占"为什么只是把 num_computed_tokens 置零？</div><div class="qa">抢占 = 丢弃该请求已算好的 KV Cache。恢复时，由于 prompt 与已生成 token 可以拼成一个新 prompt，一次 prefill 迭代就能重建全部 KV——不需要逐个 token 重放。</div></div>
+<div class="q"><div class="qt">Q5 · 为什么 SRTF 会"天然优先 decode"，且能提升前缀缓存命中率？</div><div class="qa">decode 请求每步剩余量恒为 1，prefill 请求 &gt; 1，SRTF 取最小者 → decode 自动靠前。缓存命中多的请求剩余量少 → 也会先被调度，赶在缓存块被淘汰前用上。</div></div>
+<div class="q"><div class="qt">Q6 · 异步调度为什么可行？它损失了什么？</div><div class="qa">可行是因为调度决策不依赖模型输出：两个状态标量仅凭调度决策即可更新。损失在于输出 token 的 KV 缓存登记被延后一步，极端情况下会略微降低前缀缓存命中率——实践中罕见且收益远大于损失。</div></div>
+<div class="q"><div class="qt">Q7 · Piecewise CUDA Graph 为什么偏偏把"注意力"留在 eager？</div><div class="qa">因为动态性集中在注意力：变长序列、动态调度决策、自适应 kernel 选择，都违反 CUDA Graph 的"形状固定/无 CPU 操作/地址静态"约束；而投影与 FFN 是无状态、逐 token 的，适合捕获。</div></div>
+<div class="q"><div class="qt">Q8 · 什么情况下 vLLM 的内存优化会"失效"？</div><div class="qa">当瓶颈不再是显存而是算力时（如 175B 模型 + 短序列 Alpaca + 充裕 KV Cache 显存），Orca 也能塞进大批次，此时系统转为算力受限，内存管理优势被抹平。</div></div>
+
+<div class="footer">
+本讲义基于 Woosuk Kwon 的博士论文《vLLM: An Efficient Inference Engine for Large Language Models》（UC Berkeley, Fall 2025）整理重述。<br>
+所有示意图均为依据原文内容重绘，实验数据引自原论文。仅供学习交流使用。
+</div>
+</section>
+
+</main>
+</div>
+
+<script>
+// 目录高亮
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.sidebar a'));
+  var map = {};
+  var targets = [];
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el){ map[id] = a; targets.push({el:el, a:a}); }
+  });
+  if(!targets.length) return;
+  function onScroll(){
+    var y = window.scrollY + 120;
+    var cur = targets[0];
+    for(var i=0;i<targets.length;i++){
+      if(targets[i].el.offsetTop <= y) cur = targets[i];
+    }
+    links.forEach(function(a){a.classList.remove('active');});
+    if(cur) cur.a.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>
